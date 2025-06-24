@@ -4,7 +4,7 @@ import json
 import tempfile
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
-from sound_scaffold import AudioAnalyzer, AudioEnhancer, SoundLibraryManager
+from sound_scaffold import AudioAnalyzer, AudioEnhancer, SoundLibraryManager, GeminiIntegration
 
 app = Flask(__name__)
 
@@ -16,13 +16,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 audio_analyzer = AudioAnalyzer()
 audio_enhancer = AudioEnhancer()
 sound_library = SoundLibraryManager()
+gemini_integration = GeminiIntegration()
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
     return jsonify({
         'status': 'healthy',
-        'version': '0.1.0'
+        'version': '0.2.0'
     })
 
 @app.route('/analyze', methods=['POST'])
@@ -146,6 +147,168 @@ def enhance_audio():
             os.remove(temp_file_path)
         
         return jsonify({'error': str(e)}), 500
+
+@app.route('/gemini/analyze', methods=['POST'])
+def gemini_analyze_audio():
+    """Analyze audio using Gemini AI endpoint."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Parse custom prompt if provided
+    custom_prompt = None
+    if 'prompt' in request.form:
+        custom_prompt = request.form.get('prompt')
+    
+    # Save uploaded file
+    filename = secure_filename(file.filename)
+    temp_file_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(temp_file_path)
+    
+    try:
+        # Extract audio features
+        features = audio_analyzer._extract_features(temp_file_path)
+        
+        # Get quality metrics
+        quality_metrics = audio_analyzer._assess_quality(features)
+        
+        # Use Gemini to analyze
+        gemini_results = gemini_integration.analyze_audio_content(features, custom_prompt)
+        
+        # Combine results
+        combined_results = {
+            'file_name': os.path.basename(temp_file_path),
+            'duration': features.get('duration', 0),
+            'gemini_analysis': gemini_results,
+            'quality_metrics': quality_metrics,
+            'timestamp': features.get('timestamp')
+        }
+        
+        # Store in Firestore
+        from google.cloud import firestore
+        db = firestore.Client()
+        doc_ref = db.collection('gemini_analyses').document()
+        doc_ref.set(combined_results)
+        combined_results['analysis_id'] = doc_ref.id
+        
+        # Clean up the temporary file
+        os.remove(temp_file_path)
+        
+        return jsonify(combined_results)
+    
+    except Exception as e:
+        # Clean up the temporary file in case of error
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/gemini/enhance', methods=['POST'])
+def gemini_enhancement_suggestions():
+    """Get AI-powered enhancement suggestions endpoint."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Save uploaded file
+    filename = secure_filename(file.filename)
+    temp_file_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(temp_file_path)
+    
+    try:
+        # Extract audio features
+        features = audio_analyzer._extract_features(temp_file_path)
+        
+        # Get quality metrics
+        quality_metrics = audio_analyzer._assess_quality(features)
+        
+        # Get Gemini enhancement suggestions
+        suggestions = gemini_integration.suggest_audio_enhancements(features, quality_metrics)
+        
+        # Prepare result
+        result = {
+            'file_name': os.path.basename(temp_file_path),
+            'duration': features.get('duration', 0),
+            'quality_metrics': quality_metrics,
+            'enhancement_suggestions': suggestions
+        }
+        
+        # Clean up the temporary file
+        os.remove(temp_file_path)
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        # Clean up the temporary file in case of error
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/gemini/categorize', methods=['POST'])
+def gemini_categorize_sound():
+    """Categorize sound using Gemini AI endpoint."""
+    # Check if it's a direct text description or a file
+    if 'description' in request.form:
+        description = request.form.get('description')
+        audio_features = None
+        
+        try:
+            # Categorize using text description only
+            categories = gemini_integration.categorize_sound(description)
+            return jsonify({
+                'description': description,
+                'categorization': categories
+            })
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+            
+    elif 'file' in request.files:
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        temp_file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(temp_file_path)
+        
+        try:
+            # Extract audio features
+            features = audio_analyzer._extract_features(temp_file_path)
+            
+            # Generate description (can be overridden by user-provided description)
+            description = request.form.get('description', f"Audio file: {filename}")
+            
+            # Categorize using Gemini
+            categories = gemini_integration.categorize_sound(description, features)
+            
+            result = {
+                'file_name': os.path.basename(temp_file_path),
+                'description': description,
+                'categorization': categories
+            }
+            
+            # Clean up the temporary file
+            os.remove(temp_file_path)
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            # Clean up the temporary file in case of error
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            
+            return jsonify({'error': str(e)}), 500
+    else:
+        return jsonify({'error': 'No file or description provided'}), 400
 
 @app.route('/library/search', methods=['GET'])
 def search_sound_library():
