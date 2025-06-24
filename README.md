@@ -1,6 +1,6 @@
 # SoundScaffold - Media Automation Tool
 
-SoundScaffold is an audio scene management tool designed to organize, analyze, and optimize audio elements within media productions. It leverages Python, TensorFlow, and Google Cloud technologies to provide automated audio scene analysis, categorization, and enhancement capabilities.
+SoundScaffold is an audio scene management tool designed to organize, analyze, and optimize audio elements within media productions. It leverages Python, TensorFlow, Google Cloud technologies, and Gemini API to provide automated audio scene analysis, categorization, and enhancement capabilities.
 
 ## Features
 
@@ -9,6 +9,7 @@ SoundScaffold is an audio scene management tool designed to organize, analyze, a
 - **Audio Enhancement**: Applies AI-driven optimizations to improve audio quality
 - **Scene Mapping**: Maps audio elements to visual scenes for better synchronization
 - **Continuity Checking**: Ensures audio continuity across scene transitions
+- **Gemini-Powered Analysis**: Utilizes Google's Gemini API for advanced content understanding and recommendations
 
 ## Core Components
 
@@ -57,6 +58,34 @@ for sound in results:
     print(f"{sound['name']}: {sound['description']}")
 ```
 
+### GeminiIntegration
+
+The `GeminiIntegration` class provides advanced audio content analysis and enhancement suggestions using Google's Gemini API.
+
+```python
+from sound_scaffold import GeminiIntegration, AudioAnalyzer
+
+# First extract audio features
+analyzer = AudioAnalyzer()
+audio_features = analyzer._extract_features("scene_audio.wav")
+
+# Use Gemini to analyze audio content
+gemini = GeminiIntegration()
+analysis = gemini.analyze_audio_content(audio_features)
+print(analysis['gemini_analysis'])
+
+# Get AI-powered enhancement suggestions
+suggestions = gemini.suggest_audio_enhancements(
+    audio_features, 
+    analyzer._assess_quality(audio_features)
+)
+print(suggestions['enhancement_recommendations'])
+
+# Categorize sounds with Gemini
+categorization = gemini.categorize_sound("ambient rainfall with distant thunder")
+print(categorization)
+```
+
 ## API Endpoints
 
 SoundScaffold provides a RESTful API for integration with other tools:
@@ -67,6 +96,8 @@ SoundScaffold provides a RESTful API for integration with other tools:
 - `GET /library/search`: Search sound library
 - `POST /library/add`: Add to sound library
 - `GET /scenes/{project_id}`: Get audio scenes for project
+- `POST /gemini/analyze`: Analyze audio using Gemini API
+- `POST /gemini/enhance`: Get enhancement suggestions using Gemini API
 
 ## Installation
 
@@ -76,13 +107,17 @@ SoundScaffold provides a RESTful API for integration with other tools:
 - TensorFlow 2.10+
 - Google Cloud SDK
 - FFmpeg
+- Google Gemini API access
 
 ### Installation Steps
 
 1. Clone this repository
 2. Install dependencies: `pip install -r requirements.txt`
 3. Set up Google Cloud credentials
-4. Run the application: `python api/app.py`
+4. Configure Gemini API access:
+   - Set the `GEMINI_API_KEY` environment variable, or
+   - Use application default credentials
+5. Run the application: `python api/app.py`
 
 ## Deployment
 
@@ -97,6 +132,7 @@ entrypoint: app
 env_variables:
   GOOGLE_CLOUD_PROJECT: "sound-scaffold-project"
   STORAGE_BUCKET: "sound-scaffold-assets"
+  GEMINI_API_KEY: "your-gemini-api-key"
   
 handlers:
 - url: /.*
