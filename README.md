@@ -10,6 +10,8 @@ SoundScaffold is an audio scene management tool designed to organize, analyze, a
 - **Scene Mapping**: Maps audio elements to visual scenes for better synchronization
 - **Continuity Checking**: Ensures audio continuity across scene transitions
 - **Gemini-Powered Analysis**: Utilizes Google's Gemini API for advanced content understanding and recommendations
+- **Format Support**: Processes multiple audio formats including WAV, MP3, FLAC, ALAC, and AAC
+- **Spatial Audio**: Analyzes and processes surround sound formats including 5.1, 7.1, and Atmos
 
 ## Core Components
 
@@ -155,6 +157,16 @@ COPY . .
 
 CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080"]
 ```
+
+## Integration with Other Media Automation Tools
+
+SoundScaffold is designed to integrate seamlessly with other media automation tools:
+
+- **SceneValidator**: For validating audio against scene requirements
+- **TimelineAssembler**: For synchronizing audio with video timelines
+- **VeoPromptExporter**: For audio-aware prompt generation for AI video tools
+- **LoopOptimizer**: For optimizing repeating audio elements
+- **FormatNormalizer**: For ensuring format consistency across media
 
 ## Contributing
 
